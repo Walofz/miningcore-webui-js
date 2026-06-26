@@ -1,0 +1,6 @@
+{
+  "apiBaseUrlLocal": "xxxxx",
+  "apiBaseUrlRemote": "xxxxx",
+  "defaultPoolId": "",
+  "refreshInterval": 30000
+}

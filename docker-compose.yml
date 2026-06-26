@@ -1,0 +1,9 @@
+services:
+  dashboard:
+    build: .
+    container_name: miningcore-dashboard
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080

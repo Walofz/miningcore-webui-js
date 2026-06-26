@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mining Pool Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; }
+        .nav-item { transition: all 0.2s ease-in-out; cursor: pointer; color: #94a3b8; }
+        .nav-item:hover { color: #818cf8; }
+        .nav-item.active { border-bottom: 2px solid #6366f1; color: #818cf8; }
+        .hidden { display: none !important; }
+        .glass-nav { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px); }
+        .stat-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .stat-card:hover { transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5); }
+    </style>
+</head>
+<body class="text-slate-200 antialiased">
+    <nav class="glass-nav sticky top-0 z-50 shadow-md border-b border-slate-800 relative">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row justify-between items-center py-4">
+                <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center shadow-lg">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    </div>
+                    <h1 class="text-2xl font-bold text-white tracking-tight" id="poolName">Pool<span class="text-indigo-400">Dash</span></h1>
+                </div>
+                
+                <div class="flex space-x-6 mt-4 md:mt-0 overflow-x-auto text-sm font-medium">
+                    <span class="nav-item active py-2" onclick="navigate('home')">Dashboard</span>
+                    <span class="nav-item py-2" onclick="navigate('blocks')">Blocks</span>
+                    <span class="nav-item py-2" onclick="navigate('miners')">Miners</span>
+                    <span class="nav-item py-2" onclick="navigate('payments')">Payments</span>
+                    <span class="nav-item py-2" onclick="navigate('poolinfo')">Connect</span>
+                </div>
+
+                <div class="flex mt-4 md:mt-0 relative group">
+                    <input type="text" id="walletInput" placeholder="Miner Address..." class="bg-slate-800 border border-slate-700 text-slate-200 placeholder-slate-500 rounded-l-lg pl-4 pr-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all w-64">
+                    <button onclick="searchWallet()" class="bg-indigo-600 text-white px-5 py-2 text-sm font-medium rounded-r-lg hover:bg-indigo-500 transition-colors shadow-sm">
+                        Search
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="w-full h-1 bg-slate-800 absolute bottom-0 left-0">
+            <div id="refreshBar" class="h-full bg-indigo-500 w-0" style="transition: width 0.1s linear;"></div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <section id="sec-home" class="view-section">
+            <div class="mb-6">
+                <h2 class="text-xl font-bold text-white">Network & Pool Statistics</h2>
+                <p class="text-sm text-slate-400">Real-time metrics from the miningcore API</p>
+            </div>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-6">
+                <div class="bg-slate-800 p-6 rounded-2xl shadow-lg border border-slate-700 stat-card">
+                    <h3 class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Pool Hashrate</h3>
+                    <p class="text-2xl font-bold text-indigo-400" id="poolHashrate">0 H/s</p>
+                </div>
+                <div class="bg-slate-800 p-6 rounded-2xl shadow-lg border border-slate-700 stat-card">
+                    <h3 class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Network Hashrate</h3>
+                    <p class="text-2xl font-bold text-white" id="netHashrate">0 H/s</p>
+                </div>
+                <div class="bg-slate-800 p-6 rounded-2xl shadow-lg border border-slate-700 stat-card">
+                    <h3 class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Network Difficulty</h3>
+                    <p class="text-2xl font-bold text-white" id="netDiff">0</p>
+                </div>
+                <div class="bg-slate-800 p-6 rounded-2xl shadow-lg border border-slate-700 stat-card">
+                    <h3 class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Block Height</h3>
+                    <p class="text-2xl font-bold text-white" id="blockHeight">0</p>
+                </div>
+                <div class="bg-slate-800 p-6 rounded-2xl shadow-lg border border-slate-700 stat-card">
+                    <h3 class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Active Miners</h3>
+                    <p class="text-2xl font-bold text-emerald-400" id="connectedMiners">0</p>
+                </div>
+                
+                <div class="bg-slate-800 p-6 rounded-2xl shadow-lg border border-slate-700 stat-card relative">
+                    <h3 class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Blocks Found</h3>
+                    <div class="flex items-end justify-between">
+                        <p class="text-2xl font-bold text-indigo-400" id="poolBlocks">0</p>
+                        <span id="pendingBlocksBadge" class="hidden px-2 py-1 bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-md text-xs font-bold animate-pulse">0 Pending</span>
+                    </div>
+                </div>
+                
+                <div class="bg-slate-800 p-6 rounded-2xl shadow-lg border border-slate-700 stat-card">
+                    <h3 class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Current Effort</h3>
+                    <p class="text-2xl font-bold text-white" id="poolEffort">0%</p>
+                </div>
+
+                <div class="bg-slate-800 p-6 rounded-2xl shadow-lg border border-slate-700 stat-card">
+                    <h3 class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Block Reward</h3>
+                    <p class="text-2xl font-bold text-amber-400" id="networkBlockReward">0</p>
+                </div>
+            </div>
+
+            <div class="bg-slate-800 p-6 rounded-2xl shadow-lg border border-slate-700">
+                <h2 class="text-lg font-bold text-white mb-4">Blocks History (Last 7 Days)</h2>
+                <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4" id="blocks7DaysContainer">
+                    </div>
+            </div>
+        </section>
+
+        <section id="sec-blocks" class="view-section hidden">
+            <div class="bg-slate-800 rounded-2xl shadow-lg border border-slate-700 overflow-hidden">
+                <div class="px-6 py-5 border-b border-slate-700">
+                    <h2 class="text-lg font-bold text-white">Recent Blocks</h2>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-900/50 text-slate-400 text-xs uppercase tracking-wider">
+                                <th class="px-6 py-4 font-medium">Height</th>
+                                <th class="px-6 py-4 font-medium">Finder</th>
+                                <th class="px-6 py-4 font-medium">Time</th>
+                                <th class="px-6 py-4 font-medium">Reward</th>
+                                <th class="px-6 py-4 font-medium">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="blocksTableBody" class="divide-y divide-slate-700 text-sm"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section id="sec-miners" class="view-section hidden">
+            <div class="bg-slate-800 rounded-2xl shadow-lg border border-slate-700 overflow-hidden">
+                <div class="px-6 py-5 border-b border-slate-700">
+                    <h2 class="text-lg font-bold text-white">Top Miners</h2>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-900/50 text-slate-400 text-xs uppercase tracking-wider">
+                                <th class="px-6 py-4 font-medium">Miner Address</th>
+                                <th class="px-6 py-4 font-medium">Hashrate</th>
+                                <th class="px-6 py-4 font-medium">Shares / Sec</th>
+                            </tr>
+                        </thead>
+                        <tbody id="minersTableBody" class="divide-y divide-slate-700 text-sm"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section id="sec-payments" class="view-section hidden">
+            <div class="bg-slate-800 rounded-2xl shadow-lg border border-slate-700 overflow-hidden">
+                <div class="px-6 py-5 border-b border-slate-700">
+                    <h2 class="text-lg font-bold text-white">Payment History</h2>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-900/50 text-slate-400 text-xs uppercase tracking-wider">
+                                <th class="px-6 py-4 font-medium">Time</th>
+                                <th class="px-6 py-4 font-medium">Address</th>
+                                <th class="px-6 py-4 font-medium">Amount</th>
+                                <th class="px-6 py-4 font-medium">Tx ID</th>
+                            </tr>
+                        </thead>
+                        <tbody id="paymentsTableBody" class="divide-y divide-slate-700 text-sm"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section id="sec-poolinfo" class="view-section hidden">
+            <div class="bg-slate-800 rounded-2xl shadow-lg border border-slate-700 max-w-3xl mx-auto overflow-hidden">
+                <div class="px-8 py-6 border-b border-slate-700 bg-slate-900/50">
+                    <h2 class="text-xl font-bold text-white">Connection Guide</h2>
+                    <p class="text-sm text-slate-400 mt-1">Configure your mining software using the details below</p>
+                </div>
+                <div class="p-8">
+                    <ul class="space-y-4">
+                        <li class="flex flex-col sm:flex-row justify-between pb-4 border-b border-slate-700">
+                            <span class="text-slate-400 font-medium">Coin</span>
+                            <span class="font-bold text-white" id="infoCoin">-</span>
+                        </li>
+                        <li class="flex flex-col sm:flex-row justify-between pb-4 border-b border-slate-700">
+                            <span class="text-slate-400 font-medium">Pool Fee</span>
+                            <span class="font-bold text-white" id="infoFee">-</span>
+                        </li>
+                        <li class="flex flex-col sm:flex-row justify-between pb-4 border-b border-slate-700">
+                            <span class="text-slate-400 font-medium">Minimum Payout</span>
+                            <span class="font-bold text-white" id="infoMinPayout">-</span>
+                        </li>
+                        <li class="flex flex-col sm:flex-row justify-between pb-4 border-b border-slate-700">
+                            <span class="text-slate-400 font-medium">Stratum Host</span>
+                            <div class="bg-slate-900 px-3 py-1 rounded text-sm font-mono text-indigo-400 mt-2 sm:mt-0" id="infoStratum">-</div>
+                        </li>
+                        <li class="flex flex-col sm:flex-row justify-between pt-2">
+                            <span class="text-slate-400 font-medium">Pool Wallet</span>
+                            <a href="#" target="_blank" class="font-bold text-indigo-400 hover:text-indigo-300 transition" id="infoExplorer">Unknown Address ↗</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="sec-minerinfo" class="view-section hidden">
+            <div class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center">
+                <div>
+                    <h2 class="text-2xl font-bold text-white">Miner Statistics</h2>
+                    <p class="text-sm text-slate-400 mt-1 font-mono break-all" id="minerAddressLabel"></p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="bg-slate-800 p-6 rounded-2xl shadow-lg border border-slate-700 stat-card relative overflow-hidden">
+                    <div class="absolute right-0 top-0 opacity-10 w-24 h-24 -mt-4 -mr-4 bg-indigo-500 rounded-full"></div>
+                    <h3 class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Pending Balance</h3>
+                    <p class="text-3xl font-bold text-white" id="minerPending">0</p>
+                </div>
+                <div class="bg-slate-800 p-6 rounded-2xl shadow-lg border border-slate-700 stat-card">
+                    <h3 class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Total Paid</h3>
+                    <p class="text-3xl font-bold text-emerald-400" id="minerPaid">0</p>
+                </div>
+                <div class="bg-slate-800 p-6 rounded-2xl shadow-lg border border-slate-700 stat-card">
+                    <h3 class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Current Hashrate</h3>
+                    <p class="text-3xl font-bold text-indigo-400" id="minerHashrate">0 H/s</p>
+                </div>
+            </div>
+
+            <div class="bg-slate-800 rounded-2xl shadow-lg border border-slate-700 overflow-hidden">
+                <div class="px-6 py-5 border-b border-slate-700 flex justify-between items-center">
+                    <h2 class="text-lg font-bold text-white">Active Workers</h2>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-900/50 text-slate-400 text-xs uppercase tracking-wider">
+                                <th class="px-6 py-4 font-medium">Worker Name</th>
+                                <th class="px-6 py-4 font-medium">Hashrate</th>
+                                <th class="px-6 py-4 font-medium">Shares / Sec</th>
+                            </tr>
+                        </thead>
+                        <tbody id="workersTableBody" class="divide-y divide-slate-700 text-sm"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
